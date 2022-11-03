@@ -1,0 +1,59 @@
+
+
+CREATE COMPUTE MODULE SQL_ERROR_FLOW_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		    
+		 
+		    DECLARE InputTree REFERENCE to InputExceptionList;	    
+		    SET OutputExceptionList=InputExceptionList;
+		    SET Environment.ERROR1=InputExceptionList;
+		    SET Environment.TypeRequest = 'Error_Decription';
+		    PROPAGATE TO TERMINAL 'out1' FINALIZE NONE DELETE NONE;
+		   
+		    
+	        DECLARE messageNumber INTEGER;
+	        DECLARE messageText CHARACTER;
+	        DECLARE ExceptionType CHARACTER;
+            CALL ERROR_MESSAGE (InputTree,messageNumber,messageText,ExceptionType);
+            SET OutputRoot.JSON.Data.EXCEPTION.EXCEPTIONTYPR= ExceptionType;
+            SET OutputRoot.JSON.Data.EXCEPTION.MESSAGENUMBER= messageNumber;
+            SET OutputRoot.JSON.Data.EXCEPTION.MESSAGETEXT=	messageText;
+            
+            SET OutputRoot.JSON.Data.EXECEPTION=Environment.ERROR;
+            SET Environment.TypeRequest='Final_Error_Respones';
+            PROPAGATE TO TERMINAL 'out1' FINALIZE NONE DELETE NONE;
+		-- CALL CopyEntireMessage();
+	
+		RETURN TRUE;
+	END;
+
+
+
+		CREATE PROCEDURE ERROR_MESSAGE (IN InputTree reference,OUT messageNumber integer,
+OUT messageText char,OUT ExceptionType char)	
+    /****************************************************************************
+	 * A procedure that will get the details of the last exception from a message
+	 * IN InputTree:  The incoming exception list
+	 * IN messageNumber:  The last message numberr.
+	 * IN messageText: The last message text.
+	 *****************************************************************************/
+   BEGIN
+   	    -- Create a reference to the first child of the exception list
+   	    declare ptrException reference to InputTree.*[1];
+   	    -- keep looping while the moves to the child of exception list work 
+		WHILE lastmove(ptrException) DO
+			-- store the current values for the error number and text
+			IF ptrException.Number is not null THEN
+        		SET messageNumber = ptrException.Number;
+        		SET messageText = ptrException.Text;
+        		SET ExceptionType=FIELDNAME(ptrException);
+        		
+  			END IF;
+  			-- now move to the last child which should be the next exceptionlist
+			move ptrException lastchild;
+		
+		END WHILE; 
+   END;
+   
+END MODULE;
